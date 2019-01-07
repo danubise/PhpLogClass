@@ -1,9 +1,4 @@
 <?php
-    /**
-     * Date: 09.10.15
-     * Time: 13:56
-     * Email: danubise@gmail.com
-     */
     /*
      * config
      *  log_write   file/null (file) запись в файл или выводи на монитор
@@ -33,8 +28,13 @@
         private $Color=false;
         private $GlobalIndex=""; // указывает что лог одного процесса
         //private $LevelTypes = array("info","warning","error","debug");
-
+        private $FileNameByGlobalIndex = false; // имя файла меняется от глобального индекса
+        private $Folder ="./";
+        private $AddDateTime =""; // Y-m-d  перед именем файла
         public function __construct($config=""){
+            $this->setConfig($config);
+        }
+        public function setConfig($config){
             if(is_array($config)){
                 if(isset($config['log_file'])){
                     if(trim($config['log_file']) !="") {
@@ -59,6 +59,18 @@
                 if(isset($config['log_color'])){
                     $this->Color=$config['log_color'];
                 }
+                if(isset($config['log_FileNameByGlobalIndex'])){
+                    $this->FileNameByGlobalIndex=$config['log_FileNameByGlobalIndex'];
+                }
+                if(isset($config['log_AddDateTime'])){
+                    $this->AddDateTime=$config['log_AddDateTime'];
+                }
+                if(isset($config['log_folder'])){
+                    $this->Folder=$config['log_folder'];
+                    if(!file_exists($this->Folder)) {
+                        mkdir($this->Folder, 0777, true);
+                    }
+                }
             }
             $this->LogMessage= new LogMessage();
         }
@@ -70,7 +82,6 @@
                 }
             }
         }
-
         public function info($txt,$key=""){
             if($this->Level=="all" || strstr($this->Level,"info")) {
                 if($this->Color) {
@@ -146,12 +157,30 @@
             return $log;
         }
         private function Write(){
-            $FileName=$this->FileName;
-            if($this->DifferentFile){
-                $FileName=$this->LogMessage->type."_".$FileName;
-            }
             if ($this->Write == "file") {
-                file_put_contents($FileName, $this->LogShow(), FILE_APPEND);
+                $FileName=$this->FileName;
+                $subFolder = "";
+                if($this->AddDateTime != ""){
+                    $subFolder = date($this->AddDateTime) ."/";
+                }
+                if($this->DifferentFile){
+                    if (! $this->FileNameByGlobalIndex) {
+                        $FileName = $this->LogMessage->type . "_" . $FileName;
+                    }else{
+                        if($this->GlobalIndex == ""){
+                            $subFolder = "common/".$subFolder;
+                        }else {
+                            $subFolder = trim($this->GlobalIndex ). "/".$subFolder ;
+                        }
+                    }
+                }
+                if(!file_exists($this->Folder.$subFolder)) {
+                    mkdir($this->Folder.$subFolder, 0777, true);
+                }
+                $wroteByte = file_put_contents($this->Folder.$subFolder.$FileName, $this->LogShow(), FILE_APPEND);
+                if($wroteByte === false){
+                    echo $this->LogShow();
+                }
             } else {
                 echo $this->LogShow();
             }
