@@ -1,4 +1,16 @@
 <?php
+/*
+$config['log'] = array(
+    'log_write' =>  "file", //display || file
+    'log_file' =>   "xmlhttpproxy.log",
+    'log_folder' => "/var/log/apache2/",
+    'log_level' =>  "all",
+    'log_FileNameByGlobalIndex' => false,
+    'log_AddDateTime' => "", //должна быть пустая для простого логирования
+    'log_differentfiles' => false,
+    'log_display_errors' => true
+);
+ */
     /*
      * config
      *  log_write   file/null (file) запись в файл или выводи на монитор
@@ -8,7 +20,7 @@
      *  log_active  true/false (true) включить\выключить логирование
      *  log_level   all,info,warning,error,debug перечисленные уровни логирования
      *  log_color   true/false (false) вывод логив в цветах
-     *
+     *  log_display_errors true/false (false) отображать ошибки самого логера на экран
      * пример использования
      * 1)   $log->info("information") //простой вывод информации
      * результат
@@ -31,11 +43,16 @@
         private $FileNameByGlobalIndex = false; // имя файла меняется от глобального индекса
         private $Folder ="./";
         private $AddDateTime =""; // Y-m-d  перед именем файла
+        private $log_display_errors= false; //вывод ошибок самого логера
         public function __construct($config=""){
             $this->setConfig($config);
         }
         public function setConfig($config){
             if(is_array($config)){
+
+                if(isset($config['log_display_errors']) && trim($config['log_display_errors']) !=""){
+                        $this->log_display_errors = $config['log_display_errors'];
+                }
                 if(isset($config['log_file'])){
                     if(trim($config['log_file']) !="") {
                         $this->FileName = $config['log_file'];
@@ -177,8 +194,10 @@
                 if(!file_exists($this->Folder.$subFolder)) {
                     mkdir($this->Folder.$subFolder, 0777, true);
                 }
-                $wroteByte = file_put_contents($this->Folder.$subFolder.$FileName, $this->LogShow(), FILE_APPEND);
-                if($wroteByte === false){
+                $fullLogFileName = $this->Folder.$subFolder.$FileName;
+                $wroteByte = file_put_contents($fullLogFileName, $this->LogShow(), FILE_APPEND);
+                if($wroteByte === false && $this->log_display_errors){
+                    echo "Some error to write the file '".$fullLogFileName."' '".$wroteByte."'";
                     echo $this->LogShow();
                 }
             } else {
